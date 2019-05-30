@@ -19,6 +19,7 @@
 #include "MVKCommandEncodingPool.h"
 #include "MVKCommandPool.h"
 #include "MVKImage.h"
+#include "MVKLogging.h"
 
 using namespace std;
 
@@ -89,8 +90,11 @@ id<MTLDepthStencilState> MVKCommandEncodingPool::getMTLDepthStencilState(bool us
 	MVK_ENC_REZ_ACCESS(_cmdClearDefaultDepthStencilState, newMTLDepthStencilState(useDepth, useStencil));
 }
 
-const MVKMTLBufferAllocation* MVKCommandEncodingPool::acquireMTLBufferAllocation(NSUInteger length) {
-    return _mtlBufferAllocator.acquireMTLBufferRegion(length);
+const MVKMTLBufferAllocation* MVKCommandEncodingPool::acquireMTLBufferAllocation(NSUInteger length, MTLStorageMode storageMode) {
+	MVKAssert(storageMode == MTLStorageModeShared || storageMode == MTLStorageModePrivate, "Only shared and private storage is supported.\n");
+
+	MVKMTLBufferAllocator &allocator = storageMode == MTLStorageModePrivate ? _mtlPrivateBufferAllocator : _mtlBufferAllocator;
+	return allocator.acquireMTLBufferRegion(length);
 }
 
 
@@ -139,7 +143,8 @@ void MVKCommandEncodingPool::clear() {
 #pragma mark Construction
 
 MVKCommandEncodingPool::MVKCommandEncodingPool(MVKCommandPool* commandPool) : _commandPool(commandPool),
-    _mtlBufferAllocator(commandPool->getDevice(), commandPool->getDevice()->_pMetalFeatures->maxMTLBufferSize, true) {
+    _mtlBufferAllocator(commandPool->getDevice(), commandPool->getDevice()->_pMetalFeatures->maxMTLBufferSize, true),
+	_mtlPrivateBufferAllocator(commandPool->getDevice(), commandPool->getDevice()->_pMetalFeatures->maxMTLBufferSize, true, MTLStorageModePrivate) {
 }
 
 MVKCommandEncodingPool::~MVKCommandEncodingPool() {

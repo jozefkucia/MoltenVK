@@ -355,7 +355,7 @@ public:
     void setComputeBytes(id<MTLComputeCommandEncoder> mtlEncoder, const void* bytes, NSUInteger length, uint32_t mtlBuffIndex);
 
     /** Get a temporary MTLBuffer that will be returned to a pool after the command buffer is finished. */
-    const MVKMTLBufferAllocation* getTempMTLBuffer(NSUInteger length);
+    const MVKMTLBufferAllocation* getTempMTLBuffer(NSUInteger length, MTLStorageMode storageMode = MTLStorageModeShared);
 
     /** Returns the command encoding pool. */
     MVKCommandEncodingPool* getCommandEncodingPool();

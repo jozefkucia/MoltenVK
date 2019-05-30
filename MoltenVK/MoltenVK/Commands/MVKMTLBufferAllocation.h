@@ -45,7 +45,11 @@ public:
      * Returns a pointer to the begining of this allocation memory, taking into
      * consideration this allocation's offset into the underlying MTLBuffer.
      */
-    inline void* getContents() const { return (void*)((uintptr_t)_mtlBuffer.contents + _offset); }
+    inline void* getContents() const {
+		uintptr_t contents = (uintptr_t)_mtlBuffer.contents;
+		assert(contents);
+		return (void*)(contents + _offset);
+    }
 
     /** Returns the pool whence this object was created. */
     MVKMTLBufferAllocationPool* getPool() const { return _pool; }
@@ -93,7 +97,7 @@ public:
     MVKMTLBufferAllocation* newObject() override;
 
     /** Configures this instance to dispense MVKMTLBufferAllocation instances of the specified size. */
-    MVKMTLBufferAllocationPool(MVKDevice* device, NSUInteger allocationLength);
+	MVKMTLBufferAllocationPool(MVKDevice* device, NSUInteger allocationLength, MTLStorageMode storageMode);
 
     ~MVKMTLBufferAllocationPool() override;
 
@@ -105,6 +109,7 @@ protected:
     NSUInteger _allocationLength;
     NSUInteger _mtlBufferLength;
     std::vector<id<MTLBuffer>> _mtlBuffers;
+	MTLResourceOptions _mtlResourceOptions;
     MVKDevice* _device;
 };
 
@@ -144,7 +149,7 @@ public:
      * next power-of-two value that is at least as big as the specified maximum size.
 	 * If makeThreadSafe is true, a lock will be applied when an allocation is acquired.
      */
-    MVKMTLBufferAllocator(MVKDevice* device, NSUInteger maxRegionLength, bool makeThreadSafe = false);
+    MVKMTLBufferAllocator(MVKDevice* device, NSUInteger maxRegionLength, bool makeThreadSafe = false, MTLStorageMode storageMode = MTLStorageModeShared);
 
     ~MVKMTLBufferAllocator() override;
 

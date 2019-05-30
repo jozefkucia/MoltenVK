@@ -45,18 +45,21 @@ MVKMTLBufferAllocation* MVKMTLBufferAllocationPool::newObject() {
 
 // Adds a new MTLBuffer to the buffer pool and resets the next offset to the start of it
 void MVKMTLBufferAllocationPool::addMTLBuffer() {
-    MTLResourceOptions mbOpts = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache;
-    _mtlBuffers.push_back([_device->getMTLDevice() newBufferWithLength: _mtlBufferLength options: mbOpts]);
+    _mtlBuffers.push_back([_device->getMTLDevice() newBufferWithLength: _mtlBufferLength options: _mtlResourceOptions]);
     _nextOffset = 0;
 }
 
 
-MVKMTLBufferAllocationPool::MVKMTLBufferAllocationPool(MVKDevice* device, NSUInteger allocationLength)
+MVKMTLBufferAllocationPool::MVKMTLBufferAllocationPool(MVKDevice* device, NSUInteger allocationLength, MTLStorageMode storageMode)
         : MVKObjectPool<MVKMTLBufferAllocation>(true) {
     _device = device;
     _allocationLength = allocationLength;
     _mtlBufferLength = _allocationLength * calcMTLBufferAllocationCount();
     _nextOffset = _mtlBufferLength;     // Force a MTLBuffer to be added on first access
+
+	_mtlResourceOptions = storageMode << MTLResourceStorageModeShift;
+	if (storageMode == MTLStorageModeShared)
+		_mtlResourceOptions |= MTLResourceCPUCacheModeDefaultCache;
 }
 
 // Returns the number of regions to allocate per MTLBuffer, as determined from the allocation size.
@@ -86,7 +89,7 @@ const MVKMTLBufferAllocation* MVKMTLBufferAllocator::acquireMTLBufferRegion(NSUI
 	return _makeThreadSafe ? pRP->acquireObjectSafely() : pRP->acquireObject();
 }
 
-MVKMTLBufferAllocator::MVKMTLBufferAllocator(MVKDevice* device, NSUInteger maxRegionLength, bool makeThreadSafe) : MVKBaseDeviceObject(device) {
+MVKMTLBufferAllocator::MVKMTLBufferAllocator(MVKDevice* device, NSUInteger maxRegionLength, bool makeThreadSafe, MTLStorageMode storageMode) : MVKBaseDeviceObject(device) {
     _maxAllocationLength = maxRegionLength;
 	_makeThreadSafe = makeThreadSafe;
 
@@ -97,7 +100,7 @@ MVKMTLBufferAllocator::MVKMTLBufferAllocator(MVKDevice* device, NSUInteger maxRe
     _regionPools.reserve(maxP2Exp + 1);
     NSUInteger allocLen = 1;
     for (uint32_t p2Exp = 0; p2Exp <= maxP2Exp; p2Exp++) {
-        _regionPools.push_back(new MVKMTLBufferAllocationPool(device, allocLen));
+        _regionPools.push_back(new MVKMTLBufferAllocationPool(device, allocLen, storageMode));
         allocLen <<= 1;
     }
 }

@@ -72,7 +72,7 @@ public:
      * To return the returned allocation back to the pool to be reused,
      * call the returnToPool() function on the returned allocation.
      */
-    const MVKMTLBufferAllocation* acquireMTLBufferAllocation(NSUInteger length);
+    const MVKMTLBufferAllocation* acquireMTLBufferAllocation(NSUInteger length, MTLStorageMode storageMode = MTLStorageModeShared);
 
 	/**
 	 * Returns a MTLRenderPipelineState dedicated to rendering to several attachments
@@ -148,6 +148,7 @@ protected:
     std::unordered_map<MVKBufferDescriptorData, MVKBuffer*> _transferBuffers;
     std::unordered_map<MVKBufferDescriptorData, MVKDeviceMemory*> _transferBufferMemory;
     MVKMTLBufferAllocator _mtlBufferAllocator;
+	MVKMTLBufferAllocator _mtlPrivateBufferAllocator;
     id<MTLSamplerState> _cmdBlitImageLinearMTLSamplerState = nil;
     id<MTLSamplerState> _cmdBlitImageNearestMTLSamplerState = nil;
     id<MTLDepthStencilState> _cmdClearDepthOnlyDepthStencilState = nil;
