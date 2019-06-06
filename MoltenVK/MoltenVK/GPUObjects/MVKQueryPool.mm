@@ -30,14 +30,16 @@ using namespace std;
 #pragma mark MVKQueryPool
 
 void MVKQueryPool::endQuery(uint32_t query, MVKCommandEncoder* cmdEncoder) {
-    lock_guard<mutex> lock(_availabilityLock);
+    unique_lock<mutex> lock(_availabilityLock);
     _availability[query] = DeviceAvailable;
+
     lock_guard<mutex> copyLock(_deferredCopiesLock);
     if (!_deferredCopies.empty()) {
         // Partition by readiness.
         auto ready = std::partition(_deferredCopies.begin(), _deferredCopies.end(), [this](const DeferredCopy& copy) {
-            return !areQueriesDeviceAvailable(copy.firstQuery, copy.queryCount);
+            return !areQueriesDeviceAvailableLocked(copy.firstQuery, copy.queryCount);
         });
+		lock.unlock();
         // Execute the ready copies, then remove them.
         for (auto i = ready; i != _deferredCopies.end(); ++i) {
             encodeCopyResults(cmdEncoder, i->firstQuery, i->queryCount, i->destBuffer, i->destOffset, i->stride, i->flags);
@@ -87,10 +89,15 @@ VkResult MVKQueryPool::getResults(uint32_t firstQuery,
 }
 
 bool MVKQueryPool::areQueriesDeviceAvailable(uint32_t firstQuery, uint32_t endQuery) {
-    for (uint32_t query = firstQuery; query < endQuery; query++) {
-        if ( _availability[query] < DeviceAvailable ) { return false; }
-    }
-    return true;
+	lock_guard<mutex> lock(_availabilityLock);
+	return areQueriesDeviceAvailableLocked(firstQuery, endQuery);
+}
+
+bool MVKQueryPool::areQueriesDeviceAvailableLocked(uint32_t firstQuery, uint32_t endQuery) {
+	for (uint32_t query = firstQuery; query < endQuery; query++) {
+		if ( _availability[query] < DeviceAvailable ) { return false; }
+	}
+	return true;
 }
 
 // Returns whether all the queries between the start (inclusive) and end (exclusive) queries are available.
@@ -102,7 +109,6 @@ bool MVKQueryPool::areQueriesHostAvailable(uint32_t firstQuery, uint32_t endQuer
 }
 
 VkResult MVKQueryPool::getResult(uint32_t query, void* pQryData, VkQueryResultFlags flags) {
-
 	bool isAvailable = _availability[query] == Available;
 	bool shouldOutput = (isAvailable || mvkAreFlagsEnabled(flags, VK_QUERY_RESULT_PARTIAL_BIT));
 	bool shouldOutput64Bit = mvkAreFlagsEnabled(flags, VK_QUERY_RESULT_64_BIT);

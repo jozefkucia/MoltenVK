@@ -105,6 +105,7 @@ public:
                     _queryElementCount(queryElementCount) {}
 
 protected:
+	bool areQueriesDeviceAvailableLocked(uint32_t firstQuery, uint32_t endQuery);
 	bool areQueriesHostAvailable(uint32_t firstQuery, uint32_t endQuery);
     VkResult getResult(uint32_t query, void* pQryData, VkQueryResultFlags flags);
 	virtual void getResult(uint32_t query, void* pQryData, bool shouldOutput64Bit) {}
